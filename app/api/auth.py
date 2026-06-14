@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
 
+from app.core.security import hash_password
 from app.database.database import SessionLocal
 from app.models.user import User
 from app.schemas.user import UserCreate
-from app.core.security import hash_password
 
 router = APIRouter()
 
@@ -20,29 +19,28 @@ def get_db():
 
 @router.post("/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
-
-    # проверка, существует ли пользователь
-    existing_user = db.query(User).filter(
-        or_(
-            User.email == user.email,
-            User.username == user.username
-        )
-    ).first()
-
-    if existing_user:
+    existing_email = db.query(User).filter(User.email == user.email).first()
+    if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email or username already exists"
+            detail="A user with this email already exists",
         )
 
-    # хешируем пароль
-    hashed_password = user.password
+    existing_username = (
+        db.query(User).filter(User.username == user.username).first()
+    )
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this username already exists",
+        )
 
-    # создаём пользователя
+    hashed_password = hash_password(user.password)
+
     new_user = User(
         username=user.username,
         email=user.email,
-        password_hash=hashed_password
+        password_hash=hashed_password,
     )
 
     db.add(new_user)
@@ -52,5 +50,5 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return {
         "id": new_user.id,
         "username": new_user.username,
-        "email": new_user.email
+        "email": new_user.email,
     }
