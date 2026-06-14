@@ -14,6 +14,9 @@ class PasswordSecurityTests(unittest.TestCase):
         self.assertTrue(verify_password(plain_password, hashed_password))
         self.assertFalse(verify_password("WrongPassword123!", hashed_password))
 
+    def test_verify_password_rejects_unknown_hash_format(self) -> None:
+        self.assertFalse(verify_password("password", "not-a-password-hash"))
+
 
 if __name__ == "__main__":
     unittest.main()
