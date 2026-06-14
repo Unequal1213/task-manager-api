@@ -1,14 +1,10 @@
-# app/main.py
-
 from fastapi import FastAPI
+from app.api import auth
 
-app = FastAPI(
-    title="Task Manager API",
-    version="0.1.0"
-)
+app = FastAPI(title="Task Manager API")
+
+app.include_router(auth.router)
 
 @app.get("/")
 def root():
-    return {
-        "message": "Task Manager API"
-    }
+    return {"message": "Task Manager API"}
