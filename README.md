@@ -8,7 +8,7 @@ Alembic migrations.
 Create a local `.env` file from `.env.example` and replace all placeholder
 values. The `.env` file is ignored by both Git and Docker.
 
-Install dependencies and start the API:
+Install runtime dependencies and start the API:
 
 ```powershell
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -16,6 +16,19 @@ Install dependencies and start the API:
 ```
 
 Swagger UI is available at `http://127.0.0.1:8000/docs`.
+
+Install development and testing dependencies. This also installs the runtime
+dependencies because `requirements-dev.txt` includes `requirements.txt`:
+
+```powershell
+.\venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+```
+
+Run tests locally:
+
+```powershell
+.\venv\Scripts\python.exe -m pytest
+```
 
 ## Database Migrations
 
