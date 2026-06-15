@@ -3,6 +3,20 @@
 FastAPI backend using PostgreSQL, SQLAlchemy, JWT authentication, and
 Alembic migrations.
 
+## Local Development
+
+Create a local `.env` file from `.env.example` and replace all placeholder
+values. The `.env` file is ignored by both Git and Docker.
+
+Install dependencies and start the API:
+
+```powershell
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+Swagger UI is available at `http://127.0.0.1:8000/docs`.
+
 ## Database Migrations
 
 Set `DATABASE_URL` in the local `.env` file. Alembic loads the same
@@ -49,3 +63,68 @@ should use `upgrade head`.
 The old `create_db.py` workflow has been removed. Do not call
 `Base.metadata.create_all()` during application startup; schema changes are
 managed through Alembic.
+
+## Docker
+
+Docker Compose runs the FastAPI application and PostgreSQL in separate
+containers. PostgreSQL data is stored in the named `postgres_data` volume.
+
+1. Create `.env` from `.env.example`.
+2. Replace `POSTGRES_PASSWORD` and `JWT_SECRET_KEY` with secure values.
+3. Start the stack:
+
+Generate URL-safe random values without storing them in source code:
+
+```powershell
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Run the command separately for the database password and JWT secret. Docker
+Compose reads these values from the ignored `.env` file. It constructs the
+container `DATABASE_URL` with the internal hostname `postgres`; the local
+`DATABASE_URL` remains available for running the API outside Docker.
+
+```powershell
+docker compose up --build
+```
+
+The API is available at `http://127.0.0.1:8000`, or at the port configured
+by `APP_PORT`. Swagger UI is available at `/docs`.
+
+The application container waits for PostgreSQL to become healthy, runs
+`alembic upgrade head`, and then starts Uvicorn. Migrations can also be run
+manually inside Docker:
+
+```powershell
+docker compose run --rm app alembic upgrade head
+docker compose run --rm app alembic current
+docker compose run --rm app alembic history
+```
+
+Generate a migration after changing SQLAlchemy models:
+
+```powershell
+docker compose run --rm app alembic revision --autogenerate -m "describe change"
+```
+
+Generated migration files are created inside the temporary container. To
+keep a newly generated file on the host, run the command with a bind mount:
+
+```powershell
+docker compose run --rm --volume "${PWD}:/app" app alembic revision --autogenerate -m "describe change"
+```
+
+Stop the containers while preserving database data:
+
+```powershell
+docker compose down
+```
+
+Delete the containers and PostgreSQL volume:
+
+```powershell
+docker compose down --volumes
+```
+
+The last command permanently deletes the Docker database. The real `.env`
+file is excluded from the build context and must never be committed.
