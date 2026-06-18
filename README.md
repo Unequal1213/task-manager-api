@@ -5,6 +5,23 @@ tasks. The project demonstrates a practical backend stack with PostgreSQL,
 SQLAlchemy models, Alembic migrations, JWT authentication, Docker, automated
 tests, and Ruff code quality checks.
 
+## API Screenshots
+
+Swagger UI overview:
+
+![Swagger UI overview](docs/images/swagger-overview.png)
+
+Registration request example:
+
+![Registration request example](docs/images/register-example.png)
+
+Authenticated task creation example:
+
+![Authenticated task creation example](docs/images/tasks-example.png)
+
+The task example uses a redacted bearer token so the README can be shared
+publicly without exposing credentials.
+
 ## Features
 
 - User registration with unique email and username validation
