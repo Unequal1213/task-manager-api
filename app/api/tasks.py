@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
@@ -51,8 +53,16 @@ def create_task(
 def list_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    is_completed: Annotated[bool | None, Query()] = None,
 ) -> list[Task]:
-    return db.query(Task).filter(Task.user_id == current_user.id).all()
+    query = db.query(Task).filter(Task.user_id == current_user.id)
+
+    if is_completed is not None:
+        query = query.filter(Task.is_completed == is_completed)
+
+    return query.order_by(Task.id).offset(offset).limit(limit).all()
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
