@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+src = ["app", "tests", "alembic"]
+include = ["app/**/*.py", "tests/**/*.py", "alembic/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = [
+    # FastAPI intentionally uses Depends and Security in default arguments.
+    "B008",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

@@ -30,6 +30,12 @@ Run tests locally:
 .\venv\Scripts\python.exe -m pytest
 ```
 
+Run Ruff linting locally:
+
+```powershell
+.\venv\Scripts\python.exe -m ruff check .
+```
+
 ## Database Migrations
 
 Set `DATABASE_URL` in the local `.env` file. Alembic loads the same
