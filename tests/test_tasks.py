@@ -4,6 +4,8 @@ from unittest.mock import MagicMock
 
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.dependencies import get_current_user
 from app.api.tasks import (
@@ -13,6 +15,7 @@ from app.api.tasks import (
     list_tasks,
     update_task,
 )
+from app.database.database import Base
 from app.models.task import Task
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
@@ -50,6 +53,56 @@ class TaskCreationTests(unittest.TestCase):
             user_id=99,
         )
 
+    def create_task_list_session(self, owner_task_count: int) -> Session:
+        engine = create_engine("sqlite:///:memory:")
+        testing_session_local = sessionmaker(
+            autocommit=False,
+            autoflush=False,
+            bind=engine,
+        )
+        Base.metadata.create_all(bind=engine)
+
+        db = testing_session_local()
+        db.add_all(
+            [
+                User(
+                    id=self.user.id,
+                    username=self.user.username,
+                    email=self.user.email,
+                    password_hash=self.user.password_hash,
+                ),
+                User(
+                    id=self.other_user_task.user_id,
+                    username="other_user",
+                    email="other_user@example.com",
+                    password_hash="$argon2id$other-hash",
+                ),
+            ]
+        )
+        db.add_all(
+            [
+                Task(
+                    id=index,
+                    title=f"Task {index}",
+                    description=f"Task {index} description",
+                    is_completed=index % 2 == 0,
+                    user_id=self.user.id,
+                )
+                for index in range(1, owner_task_count + 1)
+            ]
+        )
+        db.add(
+            Task(
+                id=100,
+                title=self.other_user_task.title,
+                description=self.other_user_task.description,
+                is_completed=self.other_user_task.is_completed,
+                user_id=self.other_user_task.user_id,
+            )
+        )
+        db.commit()
+        return db
+
     def test_authenticated_user_can_create_task(self) -> None:
         db = MagicMock()
         def refresh_task(task: object) -> None:
@@ -70,17 +123,65 @@ class TaskCreationTests(unittest.TestCase):
         db.commit.assert_called_once()
         db.refresh.assert_called_once_with(task)
 
-    def test_list_tasks_returns_only_current_users_tasks(self) -> None:
-        db = MagicMock()
-        db.query.return_value.filter.return_value.all.return_value = [
-            self.own_task
-        ]
+    def test_list_tasks_uses_default_limit(self) -> None:
+        db = self.create_task_list_session(owner_task_count=25)
 
-        tasks = list_tasks(db, self.user)
+        try:
+            tasks = list_tasks(db=db, current_user=self.user)
+            task_ids = [task.id for task in tasks]
+        finally:
+            db.close()
 
-        self.assertEqual(tasks, [self.own_task])
-        self.assertTrue(all(task.user_id == self.user.id for task in tasks))
-        db.query.return_value.filter.assert_called_once()
+        self.assertEqual(len(tasks), 20)
+        self.assertEqual(task_ids, list(range(1, 21)))
+
+    def test_list_tasks_applies_limit_and_offset(self) -> None:
+        db = self.create_task_list_session(owner_task_count=5)
+
+        try:
+            tasks = list_tasks(
+                db=db,
+                current_user=self.user,
+                limit=2,
+                offset=1,
+            )
+            task_ids = [task.id for task in tasks]
+        finally:
+            db.close()
+
+        self.assertEqual(task_ids, [2, 3])
+
+    def test_list_tasks_filters_by_completion_status(self) -> None:
+        db = self.create_task_list_session(owner_task_count=5)
+
+        try:
+            tasks = list_tasks(
+                db=db,
+                current_user=self.user,
+                is_completed=True,
+            )
+            task_ids = [task.id for task in tasks]
+        finally:
+            db.close()
+
+        self.assertEqual(task_ids, [2, 4])
+        self.assertTrue(all(task.is_completed for task in tasks))
+
+    def test_list_tasks_excludes_another_users_tasks(self) -> None:
+        db = self.create_task_list_session(owner_task_count=3)
+
+        try:
+            tasks = list_tasks(
+                db=db,
+                current_user=self.user,
+                limit=100,
+            )
+            task_user_ids = [task.user_id for task in tasks]
+        finally:
+            db.close()
+
+        self.assertEqual(task_user_ids, [self.user.id, self.user.id, self.user.id])
+        self.assertNotIn(self.other_user_task.user_id, task_user_ids)
 
     def test_get_own_task(self) -> None:
         db = MagicMock()

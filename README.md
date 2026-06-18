@@ -249,7 +249,7 @@ Ruff is configured in `pyproject.toml` to check `app`, `tests`, and `alembic`.
 | `POST` | `/login` | No | Authenticate a user and return a JWT access token. |
 | `GET` | `/me` | Bearer token | Return the currently authenticated user. |
 | `POST` | `/tasks` | Bearer token | Create a task for the current user. |
-| `GET` | `/tasks` | Bearer token | List tasks owned by the current user. |
+| `GET` | `/tasks` | Bearer token | List current-user tasks with optional `limit`, `offset`, and `is_completed` query parameters. |
 | `GET` | `/tasks/{task_id}` | Bearer token | Get one task owned by the current user. |
 | `PATCH` | `/tasks/{task_id}` | Bearer token | Update one task owned by the current user. |
 | `DELETE` | `/tasks/{task_id}` | Bearer token | Delete one task owned by the current user. |
