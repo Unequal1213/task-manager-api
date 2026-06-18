@@ -1,4 +1,4 @@
-alembic==1.18.4
+alembic==1.16.5
 email-validator==2.3.0
 fastapi==0.136.3
 psycopg2-binary==2.9.12
