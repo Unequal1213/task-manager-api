@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
@@ -9,6 +9,9 @@ from app.models.user import User
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+TaskSortBy = Literal["created_at", "updated_at", "title", "is_completed"]
+SortOrder = Literal["asc", "desc"]
 
 
 def _get_user_task(task_id: int, user_id: int, db: Session) -> Task:
@@ -56,13 +59,26 @@ def list_tasks(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     is_completed: Annotated[bool | None, Query()] = None,
+    sort_by: Annotated[TaskSortBy, Query()] = "created_at",
+    sort_order: Annotated[SortOrder, Query()] = "desc",
 ) -> list[Task]:
     query = db.query(Task).filter(Task.user_id == current_user.id)
 
     if is_completed is not None:
         query = query.filter(Task.is_completed == is_completed)
 
-    return query.order_by(Task.id).offset(offset).limit(limit).all()
+    sort_columns = {
+        "created_at": Task.created_at,
+        "updated_at": Task.updated_at,
+        "title": Task.title,
+        "is_completed": Task.is_completed,
+    }
+    sort_column = sort_columns[sort_by]
+    sort_expression = (
+        sort_column.asc() if sort_order == "asc" else sort_column.desc()
+    )
+
+    return query.order_by(sort_expression).offset(offset).limit(limit).all()
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
