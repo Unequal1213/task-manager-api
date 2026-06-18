@@ -1,5 +1,7 @@
 # Task Manager API
 
+[![CI](https://github.com/Unequal1213/task-manager-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Unequal1213/task-manager-api/actions/workflows/ci.yml)
+
 A portfolio-ready FastAPI backend for managing user accounts and personal
 tasks. The project demonstrates a practical backend stack with PostgreSQL,
 SQLAlchemy models, Alembic migrations, JWT authentication, Docker, automated
